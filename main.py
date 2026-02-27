@@ -7,6 +7,7 @@ import certifi
 import psycopg2
 from dotenv import load_dotenv
 import os
+from datetime import datetime
 
 # TODO: Take a look at how to solve the ssl problem
 # TODO: Data base connection
@@ -34,13 +35,13 @@ def create_table_if_not_exists(conn):
         cur.execute(query)
         conn.commit()
 
-def insert_currency_data(conn, data):
+def insert_currency_data(conn, data, scraped_at):
     """Insert currency data into the table."""
     with conn.cursor() as cur:
         for currency, rate in data:
             cur.execute(
-                "INSERT INTO currency_rates (currency, rate) VALUES (%s, %s)",
-                (currency, rate)
+                "INSERT INTO currency_rates (currency, rate, scraped_at) VALUES (%s, %s, %s)",
+                (currency, rate, scraped_at)
             )
         conn.commit()
 
@@ -87,6 +88,8 @@ if __name__ == "__main__":
     soup = parse_html(html)
 
     data = []
+    scraped_at = datetime.now()
+    logging.info(f"Scraping performed at: {scraped_at}")
     if soup:
         for currency in currencies:
             exchange_rate = extract_strong_text_by_id(soup, currency)
@@ -103,7 +106,7 @@ if __name__ == "__main__":
     conn = connect_postgres(DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT)
     if conn:
         create_table_if_not_exists(conn)
-        insert_currency_data(conn, data)
+        insert_currency_data(conn, data, scraped_at)
         conn.close()
         logging.info("Currency data inserted into PostgreSQL.")
     
