@@ -136,3 +136,78 @@ docker exec -it benni-postgres psql -U "$DB_USER" -d "$DB_NAME" -c "SELECT curre
 - Current script stores rate values as text (`VARCHAR`).
 - `docker-compose.yml` sets `DB_HOST=postgres` for the scraper service automatically.
 - `ALLOW_INSECURE_SSL_FALLBACK=true` enables a fallback request with `verify=False` when BCV SSL verification fails.
+
+
+# Docker Lessons
+
+## Main Concepts
+
+- `Dockerfile` defines how to build the `scraper` image only (Python runtime, dependencies, cron setup, entrypoint).
+- `docker-compose.yml` defines the full app stack and how services run together (`postgres` + `scraper`).
+- The database is not built in your `Dockerfile` because it uses the official `postgres:16` image as a separate service.
+- Service-to-service communication happens through the Compose network; `DB_HOST=postgres` works because `postgres` is the service name.
+- Persistence is handled with the named volume `benni_postgres_data`, so DB data survives container restarts and recreations.
+- `depends_on` with `condition: service_healthy` helps ensure `scraper` starts after Postgres is ready.
+- `docker exec -it` is useful for interactive troubleshooting inside running containers (for example with `psql`).
+
+## Valuable Docker Commands For This Project
+
+Start and build containers:
+
+```bash
+docker compose up -d --build
+```
+
+Check running services:
+
+```bash
+docker compose ps
+```
+
+View scraper logs:
+
+```bash
+docker logs -f benni-scraper
+```
+
+View database logs:
+
+```bash
+docker logs -f benni-postgres
+```
+
+Open interactive PostgreSQL shell:
+
+```bash
+docker exec -it benni-postgres psql -U "$DB_USER" -d "$DB_NAME"
+```
+
+Run one SQL query without entering shell:
+
+```bash
+docker exec -it benni-postgres psql -U "$DB_USER" -d "$DB_NAME" -c "SELECT currency, rate, scraped_at FROM currency_rates ORDER BY scraped_at DESC LIMIT 20;"
+```
+
+List tables in the connected database:
+
+```bash
+docker exec -it benni-postgres psql -U "$DB_USER" -d "$DB_NAME" -c "\dt"
+```
+
+Count inserted rows:
+
+```bash
+docker exec -it benni-postgres psql -U "$DB_USER" -d "$DB_NAME" -c "SELECT COUNT(*) FROM currency_rates;"
+```
+
+Stop containers:
+
+```bash
+docker compose down
+```
+
+Stop containers and remove DB volume (deletes DB data):
+
+```bash
+docker compose down -v
+```
