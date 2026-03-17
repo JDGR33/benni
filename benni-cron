@@ -1,4 +1,10 @@
+# Use POSIX shell for all cron commands.
 SHELL=/bin/sh
+
+# Provide an explicit PATH because cron runs with a minimal environment.
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
+# Run at minute 0 at hours 00:00, 08:00, and 16:00 every day.
+# Append stdout to PID 1 stdout and stderr to PID 1 stderr so logs
+# are visible in container logs (for example via `docker logs`).
 0 0,8,16 * * * /app/cronjob.sh >> /proc/1/fd/1 2>> /proc/1/fd/2

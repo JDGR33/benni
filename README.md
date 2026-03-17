@@ -110,6 +110,28 @@ docker compose down -v
 - Timezone: UTC
 - Runs inside the `scraper` container using cron
 
+### How the scheduler files work
+
+The scheduler is split across three files that run in sequence:
+
+1. `entrypoint.sh` (container startup)
+2. `benni-cron` (cron schedule definition)
+3. `cronjob.sh` (job wrapper that runs Python)
+
+Execution flow:
+
+1. The container starts and runs `entrypoint.sh`.
+2. `entrypoint.sh` sets `TZ` (defaults to `UTC`) and writes all current environment variables into `/etc/profile.d/container_env.sh` as `export ...` lines.
+3. `entrypoint.sh` installs the crontab from `/etc/cron.d/benni-cron` and starts cron in foreground with `exec cron -f`.
+4. Cron reads `benni-cron` and triggers `/app/cronjob.sh` at `0 0,8,16 * * *`.
+5. `cronjob.sh` sources `/etc/profile.d/container_env.sh`, changes to `/app`, and runs `python main.py`.
+
+Important command behavior:
+
+- In `benni-cron`, `>> /proc/1/fd/1 2>> /proc/1/fd/2` sends job output to the container's main stdout/stderr so logs appear in `docker logs`.
+- `set -e` in shell scripts makes them fail fast if any command returns a non-zero exit code.
+- Using a saved env file is necessary because cron jobs do not inherit the full interactive/container environment by default.
+
 ### Logs and verification
 
 Scraper logs:
