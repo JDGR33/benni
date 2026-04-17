@@ -10,6 +10,11 @@ services:
       TZ: UTC
     volumes:
       - benni_postgres_data:/var/lib/postgresql/data
+    networks:
+      default: {}
+      homeserver_shared:
+        aliases:
+          - benni-postgres
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
       interval: 10s
@@ -36,3 +41,8 @@ services:
 
 volumes:
   benni_postgres_data:
+
+
+networks:
+  homeserver_shared:
+    name: homeserver_shared
